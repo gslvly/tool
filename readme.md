@@ -50,4 +50,7 @@ creator函数会将各个分散的请求集合起来批量请求，提高效率�
 const card = computed(() => pool.getCardById(id).value) // 直接拿card去渲染。
 ```
 
-详见 `pool/temp.ts`
+详见 [pool/temp.ts](./pool/temp.ts)
+
+## vite-plugins
+请查看 [vite-plugins/readme.md](./vite-plugins/readme.md)
