@@ -54,3 +54,9 @@ const card = computed(() => pool.getCardById(id).value) // 直接拿card去渲�
 
 ## vite-plugins
 请查看 [vite-plugins/readme.md](./vite-plugins/readme.md)
+
+## components
+请查看 [components/readme.md](./components/readme.md)
+
+## opener
+提供一个方法，将dom显示在新的窗口中。次窗口不是弹窗，而是独立窗口，window.open创建的独立窗口。
