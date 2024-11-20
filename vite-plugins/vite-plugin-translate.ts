@@ -70,7 +70,11 @@ const createTransform = (autoImport: string) => {
         const fn =
           parent?.callee?.name ||
           parent?.callee?.property?.name ||
-          (node.type === 'TemplateElement' && parent?.parent?.callee?.property?.name)
+          (node.type === 'TemplateElement' && parent?.parent?.callee?.property?.name) ||
+          // vue3会改为_unref(t)('中文')
+          (parent?.callee?.type === 'CallExpression' &&
+            parent.callee.callee?.name === '_unref' &&
+            parent.callee.arguments?.[0]?.name)
 
         if (fn === 't' || fn === 'tc') {
           chineseStrings.add(value)
@@ -159,12 +163,12 @@ const createDataManager = () => {
           it.forEach((s) => allChinese.add(s))
         })
 
-        for (let path of map.keys()) {
+        for (const path of map.keys()) {
           let change = false
           const json = jsonFilterHasValue(map.get(path))
 
-          let res = clear ? {} : json
-          let empty = [] as string[] // 将空的数据显示在最后吗
+          const res = clear ? {} : json
+          const empty = [] as string[] // 将空的数据显示在最后吗
           allChinese.forEach((chinese) => {
             if (!json[chinese]) {
               // 新增了
@@ -193,7 +197,7 @@ const createDataManager = () => {
     const oldObj = jsonFilterHasValue(map.get(path))
     let isChanged = false
 
-    for (let key of Object.keys(newObj)) {
+    for (const key of Object.keys(newObj)) {
       if (oldObj[key] !== newObj[key]) {
         isChanged = true
         break
