@@ -8,6 +8,25 @@ type Options = {
 
 export const svg = ({ prefix = 'svg', dir }: Options): Plugin => {
   const idPrefix = 'virtual:' + Math.random()
+  const svgMap = new Map<string, string>()
+
+  const generateTs = () => {
+    const str = [...svgMap.keys()]
+      .map((it) => {
+        const name = it.includes('-') ? `'Svg${it}'` : `Svg${it}`
+        return `${name}: DefineComponent<{ size?: number }>`
+      })
+      .join('\n    ')
+
+    const ts = `import { DefineComponent } from 'vue'
+declare module 'vue' {
+  export interface GlobalComponents {
+    ${str}
+  }
+}\n`
+    console.log('name', 'svg-icon.d.ts')
+    fs.writeFileSync(resolve(process.cwd(), './svg-icon.d.ts'), ts)
+  }
 
   const toSameName = (id: string) => {
     // 首字母大写，-x转换为X
@@ -18,16 +37,22 @@ export const svg = ({ prefix = 'svg', dir }: Options): Plugin => {
   }
 
   prefix = toSameName(prefix)
-  const svgMap = new Map<string, string>()
   const loadSvg = (svgId) => {
-    const svg = svgMap.get(svgId)
+    let svg = svgMap.get(svgId)
     if (!svg) console.error('not found svg:' + svg)
+    else {
+      svg = svg.replace(
+        '<svg',
+        `<svg :style="{width:size ? size+'px' :unset,height:size ? size+'px':unset}"`
+      )
+    }
     return `<template>
-        ${svg}
+        ${svg || ''}
         </template>
         <script>
         export default {
-            name: ${JSON.stringify(svgId)},
+            props:{size:Number},
+            name: ${JSON.stringify('Svg' + svgId)},
         }
         </script>
         `
@@ -52,6 +77,7 @@ export const svg = ({ prefix = 'svg', dir }: Options): Plugin => {
     })
   }
   getSvgs(dir)
+  generateTs()
 
   return {
     configResolved(cfg) {
