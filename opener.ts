@@ -5,7 +5,7 @@ export type IPos = {
   x: number
   y: number
 }
-type IWin = (Window & { channel: BroadcastChannel }) | undefined
+type IWin = (Window & { channel: BroadcastChannel; domWrapper: HTMLDivElement }) | undefined
 
 export const createOpenerManger = (opt: {
   onClose: (v: IPos) => void
@@ -13,7 +13,14 @@ export const createOpenerManger = (opt: {
 }) => {
   let w: IWin
   let closeTimeout: number
-  const open = (dom: HTMLElement) => {
+
+  const cloneNode = (node: HTMLElement | SVGSymbolElement) => {
+    return w!.document.importNode(node, true)
+  }
+  const moveNode = (node: HTMLElement) => {
+    return w!.document.adoptNode(node)
+  }
+  const open = async (dom: HTMLElement) => {
     clearTimeout(closeTimeout)
     closeTimeout = -1
 
@@ -21,11 +28,13 @@ export const createOpenerManger = (opt: {
       w.focus()
       return
     }
+
     const oldPos = opt.getPos()
     if (w) {
-      w.document.body.innerHTML = ''
-      w.document.body.appendChild(dom)
+      w.domWrapper.innerHTML = ''
+      w.domWrapper.appendChild(moveNode(dom))
       w.focus()
+      // 避免注册多个事件
       return
     }
 
@@ -36,33 +45,37 @@ export const createOpenerManger = (opt: {
     ) as IWin
 
     if (!w) return
+
     console.log('move', oldPos)
     oldPos && w.moveTo(oldPos.x, oldPos.y)
 
-    w.document.body.appendChild(dom)
-
     const style = document.querySelectorAll('style')
-    style.forEach((it) => w!.document.head.appendChild(it.cloneNode(true)))
+    style.forEach((it) => w!.document.head.appendChild(cloneNode(it)))
 
     const symbolIcon = document.querySelectorAll('symbol')
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    const svg = w.document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    svg.setAttribute('xmlns:link', 'http://www.w3.org/1999/xlink')
 
-    symbolIcon.forEach((it) => svg.appendChild(it.cloneNode(true)))
-    w.document.head.appendChild(svg)
+    w.domWrapper = document.createElement('div')
+    w.domWrapper.appendChild(moveNode(dom))
+    w.document.body.appendChild(w.domWrapper)
 
+    symbolIcon.forEach((it) => svg.appendChild(cloneNode(it)))
+
+    w.document.body.insertBefore(svg, w.document.body.firstChild)
     // 传递事件
     // select使用mouseup收起来
     w.addEventListener('mouseup', (e) => {
       const isSelectOrInput = (it: EventTarget) =>
-        it.className?.includes?.('el-input') || it.className?.includes?.('el-select')
+        (it as HTMLElement).className?.includes?.('el-input') || (it as HTMLElement).className?.includes?.('el-select')
 
       if (e.composedPath().some(isSelectOrInput)) return
       document.dispatchEvent(new Event('mouseup'))
     })
     // popper使用click事件收起来
     w.addEventListener('click', (e) => {
-      if (e.composedPath().some((it) => it.className?.includes?.('el-popover'))) return
+      if (e.composedPath().some((it) => (it as HTMLElement).className?.includes?.('el-popover'))) return
       document.dispatchEvent(new Event('click'))
     })
 
